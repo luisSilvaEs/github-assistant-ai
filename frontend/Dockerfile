@@ -1,20 +1,16 @@
-# Use Node.js Alpine as a lightweight base image
-FROM node:20-alpine
+# Dockerfile for Create React App (CRA)
 
-# Set working directory
+FROM node:20
+
 WORKDIR /app
 
-# Copy only package files first for caching
 COPY package.json package-lock.json* ./
-
-# Install dependencies
 RUN npm install
 
-# Copy the rest of the app
 COPY . .
 
-# Expose Vite's default dev port
-EXPOSE 5173
+# CRA uses port 3000 by default
+EXPOSE 3000
 
-# Start Vite dev server
-CMD ["npm", "run", "dev", "--", "--host"]
+# Start CRA in dev mode
+CMD ["npm", "start"]
