@@ -30,7 +30,6 @@ def send_message_and_get_response(message: str, thread_id: str) -> str:
     )
     print(f"🔸 Started run: {run.id}", flush=True)
 
-    # poll loop
     while True:
         status = openai.beta.threads.runs.retrieve(
             thread_id=thread_id,
@@ -39,26 +38,30 @@ def send_message_and_get_response(message: str, thread_id: str) -> str:
         print(f"Run status: {status.status}", flush=True)
 
         if status.status == "requires_action":
-            print("→ requires_action detected", flush=True)
-            for tool_call in status.required_action.submit_tool_outputs.tool_calls:
-                print(f"→ tool_call: {tool_call.function.name} args={tool_call.function.arguments}", flush=True)
-                args = eval(tool_call.function.arguments)
+            tool_calls = status.required_action.submit_tool_outputs.tool_calls
+            tool_outputs = []
 
-                if tool_call.function.name == "get_last_commits":
+            for tool_call in tool_calls:
+                tool_name = tool_call.function.name
+                args = eval(tool_call.function.arguments)  # Note: eval is okay here due to trusted input
+
+                print(f"🔧 Tool call requested: {tool_name} with args {args}", flush=True)
+
+                if tool_name == "get_last_commits":
                     result = get_last_commits(**args)
-                    print(f"→ tool result: {result}", flush=True)
+                    tool_outputs.append({
+                        "tool_call_id": tool_call.id,
+                        "output": str(result)
+                    })
 
-                    openai.beta.threads.runs.submit_tool_outputs(
-                        thread_id=thread_id,
-                        run_id=run.id,
-                        tool_outputs=[{
-                            "tool_call_id": tool_call.id,
-                            "output": str(result)
-                        }]
-                    )
-                    print("→ submitted tool outputs", flush=True)
+            print(f"📤 Submitting tool outputs: {tool_outputs}", flush=True)
 
-            # after handling tool calls, go back to polling
+            run = openai.beta.threads.runs.submit_tool_outputs(
+                thread_id=thread_id,
+                run_id=run.id,
+                tool_outputs=tool_outputs
+            )
+
             time.sleep(1)
             continue
 
@@ -66,10 +69,16 @@ def send_message_and_get_response(message: str, thread_id: str) -> str:
             print("✅ Run completed", flush=True)
             break
 
-        # in case status is "queued" or "in_progress"
+        if status.status in ("failed", "cancelled"):
+            err = getattr(status, "error", None) or getattr(status, "error_message", None)
+            print("❌ Full run status object:", status, flush=True)
+            print(f"❌ Run {run.id} failed with error: {err}", flush=True)
+            raise RuntimeError(f"Assistant run failed: {err or 'no message'}")
+
         time.sleep(1)
 
     messages = openai.beta.threads.messages.list(thread_id)
     final = messages.data[0].content[0].text.value
     print(f"🔹 Final assistant message: {final}", flush=True)
     return final
+
