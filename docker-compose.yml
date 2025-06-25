@@ -1,0 +1,22 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"  # ✅ CRA default
+    volumes:
+      - ./frontend:/app
+    stdin_open: true    # ✅ Needed for CRA dev server
+    tty: true
+    depends_on:
+      - backend
