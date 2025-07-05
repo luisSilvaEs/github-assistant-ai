@@ -55,7 +55,35 @@ OPENAI_ASSISTANT_ID=asst-xxx
 > [!IMPORTANT]
 > ⚠️ Do NOT commit this file. It should be ignored via .gitignore.
 
-## 3. Run the app with Docker
+## 3. MCP function
+
+```json
+{
+  "name": "get_last_commits",
+  "description": "Get the last commits from a GitHub repository",
+  "strict": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "repo_name": {
+        "type": "string",
+        "description": "The name of the repository"
+      },
+      "count": {
+        "type": "integer",
+        "description": "Number of commits to fetch (default 3)"
+      }
+    },
+    "required": ["repo_name"]
+  }
+}
+```
+
+> [!NOTE]
+> Do not forget to create an AI Assistant first [https://platform.openai.com/assistants/](https://platform.openai.com/assistants/)
+> Also, there is a cost for using Open AI API and it is additional to the cost if you are already paying Chat GPT. Therefore, consider a $10USD montly. If call to the API exceeds free tier, the cost fill increase. You can set alarms though.
+
+## 4. Run the app with Docker
 
 ```bash
 docker compose up --build
